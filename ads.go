@@ -21,6 +21,10 @@ type Backend struct {
 	lib ADSLib
 }
 
+func Create(adsLib ADSLib) *Backend {
+	return &Backend{adsLib}
+}
+
 func returnADSResult(c *gin.Context, dat any, err error) {
 	if err != nil {
 		c.String(500, "{\"error\":\""+err.Error()+"\"}")
