@@ -89,7 +89,7 @@ func (l *errorLib) WriteControl(adsState uint16, deviceState uint16) (any, error
 
 func TestGetVersionSuccess(t *testing.T) {
 	l := &successLib{1, 2, 3, 4, 5}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -102,7 +102,7 @@ func TestGetVersionSuccess(t *testing.T) {
 
 func TestGetVersionError(t *testing.T) {
 	l := &errorLib{}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -115,7 +115,7 @@ func TestGetVersionError(t *testing.T) {
 
 func TestGetStateSuccess(t *testing.T) {
 	l := &successLib{1, 2, 3, 4, 5}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -128,7 +128,7 @@ func TestGetStateSuccess(t *testing.T) {
 
 func TestGetStateError(t *testing.T) {
 	l := &errorLib{}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -141,7 +141,7 @@ func TestGetStateError(t *testing.T) {
 
 func TestGetDeviceInfoSuccess(t *testing.T) {
 	l := &successLib{1, 2, 3, 4, 5}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -154,7 +154,7 @@ func TestGetDeviceInfoSuccess(t *testing.T) {
 
 func TestGetDeviceInfoError(t *testing.T) {
 	l := &errorLib{}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -167,7 +167,7 @@ func TestGetDeviceInfoError(t *testing.T) {
 
 func TestGetSymbolInfoSuccess(t *testing.T) {
 	l := &successLib{1, 2, 3, 4, 5}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -180,7 +180,7 @@ func TestGetSymbolInfoSuccess(t *testing.T) {
 
 func TestGetSymbolInfoError(t *testing.T) {
 	l := &errorLib{}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -193,7 +193,7 @@ func TestGetSymbolInfoError(t *testing.T) {
 
 func TestGetSymbolValueSuccess(t *testing.T) {
 	l := &successLib{1, 2, 3, 4, 5}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -206,7 +206,7 @@ func TestGetSymbolValueSuccess(t *testing.T) {
 
 func TestGetSymbolValueError(t *testing.T) {
 	l := &errorLib{}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -219,7 +219,7 @@ func TestGetSymbolValueError(t *testing.T) {
 
 func TestListSymbolsSuccess(t *testing.T) {
 	l := &successLib{1, 2, 3, 4, 5}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -232,7 +232,7 @@ func TestListSymbolsSuccess(t *testing.T) {
 
 func TestListSymbolsError(t *testing.T) {
 	l := &errorLib{}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -245,7 +245,7 @@ func TestListSymbolsError(t *testing.T) {
 
 func TestSetSymbolValueSuccess(t *testing.T) {
 	l := &successLib{1, 2, 3, 4, 5}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -258,7 +258,7 @@ func TestSetSymbolValueSuccess(t *testing.T) {
 
 func TestSetSymbolValueError(t *testing.T) {
 	l := &errorLib{}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -271,7 +271,7 @@ func TestSetSymbolValueError(t *testing.T) {
 
 func TestWriteControlSuccess(t *testing.T) {
 	l := &successLib{1, 2, 3, 4, 5}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()
@@ -298,7 +298,7 @@ func TestWriteControlSuccess(t *testing.T) {
 
 func TestWriteControlError(t *testing.T) {
 	l := &errorLib{}
-	b := &Backend{l}
+	b := Create[any](l)
 	router := b.SetupRouter()
 
 	w := httptest.NewRecorder()

@@ -6,23 +6,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type ADSLib interface {
-	GetVersion() (any, error)
-	GetState() (any, error)
-	GetDeviceInfo() (any, error)
-	GetSymbolInfo(name string) (any, error)
-	GetSymbolValue(name string) (any, error)
+type ADSLib[T any] interface {
+	GetVersion() (T, error)
+	GetState() (T, error)
+	GetDeviceInfo() (T, error)
+	GetSymbolInfo(name string) (T, error)
+	GetSymbolValue(name string) (T, error)
 	ListSymbols() (any, error)
-	SetSymbolValue(name string, value any) (any, error)
-	WriteControl(adsState uint16, deviceState uint16) (any, error)
+	SetSymbolValue(name string, value any) (T, error)
+	WriteControl(adsState uint16, deviceState uint16) (T, error)
 }
 
-type Backend struct {
-	lib ADSLib
+type Backend[T any] struct {
+	lib ADSLib[T]
 }
 
-func Create(adsLib ADSLib) *Backend {
-	return &Backend{adsLib}
+func Create[T any](adsLib ADSLib[T]) *Backend[T] {
+	return &Backend[T]{adsLib}
 }
 
 func returnADSResult(c *gin.Context, dat any, err error) {
@@ -38,39 +38,39 @@ func returnADSResult(c *gin.Context, dat any, err error) {
 	}
 }
 
-func (b *Backend) GetVersion(c *gin.Context) {
+func (b *Backend[T]) GetVersion(c *gin.Context) {
 	dat, err := b.lib.GetVersion()
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend) GetState(c *gin.Context) {
+func (b *Backend[T]) GetState(c *gin.Context) {
 	dat, err := b.lib.GetState()
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend) GetDeviceInfo(c *gin.Context) {
+func (b *Backend[T]) GetDeviceInfo(c *gin.Context) {
 	dat, err := b.lib.GetDeviceInfo()
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend) GetSymbolInfo(c *gin.Context) {
+func (b *Backend[T]) GetSymbolInfo(c *gin.Context) {
 	name := c.Param("name")
 	dat, err := b.lib.GetSymbolInfo(name)
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend) GetSymbolValue(c *gin.Context) {
+func (b *Backend[T]) GetSymbolValue(c *gin.Context) {
 	name := c.Param("name")
 	dat, err := b.lib.GetSymbolValue(name)
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend) ListSymbols(c *gin.Context) {
+func (b *Backend[T]) ListSymbols(c *gin.Context) {
 	dat, err := b.lib.ListSymbols()
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend) SetSymbolValue(c *gin.Context) {
+func (b *Backend[T]) SetSymbolValue(c *gin.Context) {
 	name := c.Param("name")
 	rawData, err := c.GetRawData()
 	if err == nil {
@@ -92,7 +92,7 @@ func (b *Backend) SetSymbolValue(c *gin.Context) {
 	}
 }
 
-func (b *Backend) WriteControl(c *gin.Context) {
+func (b *Backend[T]) WriteControl(c *gin.Context) {
 	rawData, err := c.GetRawData()
 	if err == nil {
 		var data map[string]uint16
@@ -110,7 +110,7 @@ func (b *Backend) WriteControl(c *gin.Context) {
 	}
 }
 
-func (b *Backend) SetupRouter() *gin.Engine {
+func (b *Backend[T]) SetupRouter() *gin.Engine {
 	r := gin.Default()
 	r.SetTrustedProxies(nil)
 	r.GET("/version", b.GetVersion)
