@@ -12,7 +12,7 @@ type ADSLib[T any] interface {
 	GetDeviceInfo() (T, error)
 	GetSymbolInfo(name string) (T, error)
 	GetSymbolValue(name string) (T, error)
-	ListSymbols() (any, error)
+	ListSymbols() (T, error)
 	SetSymbolValue(name string, value any) (T, error)
 	WriteControl(adsState uint16, deviceState uint16) (T, error)
 }
