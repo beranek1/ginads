@@ -3,26 +3,16 @@ package ginads
 import (
 	"encoding/json"
 
+	"github.com/beranek1/goadsinterface"
 	"github.com/gin-gonic/gin"
 )
 
-type ADSLib[T any] interface {
-	GetVersion() (T, error)
-	GetState() (T, error)
-	GetDeviceInfo() (T, error)
-	GetSymbolInfo(name string) (T, error)
-	GetSymbolValue(name string) (T, error)
-	ListSymbols() (T, error)
-	SetSymbolValue(name string, value any) (T, error)
-	WriteControl(adsState uint16, deviceState uint16) (T, error)
+type Backend struct {
+	lib goadsinterface.AdsLibrary
 }
 
-type Backend[T any] struct {
-	lib ADSLib[T]
-}
-
-func Create[T any](adsLib ADSLib[T]) *Backend[T] {
-	return &Backend[T]{adsLib}
+func Create(adsLib goadsinterface.AdsLibrary) *Backend {
+	return &Backend{adsLib}
 }
 
 func returnADSResult(c *gin.Context, dat any, err error) {
@@ -38,69 +28,50 @@ func returnADSResult(c *gin.Context, dat any, err error) {
 	}
 }
 
-func (b *Backend[T]) GetVersion(c *gin.Context) {
+func (b *Backend) GetVersion(c *gin.Context) {
 	dat, err := b.lib.GetVersion()
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend[T]) GetState(c *gin.Context) {
+func (b *Backend) GetState(c *gin.Context) {
 	dat, err := b.lib.GetState()
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend[T]) GetDeviceInfo(c *gin.Context) {
+func (b *Backend) GetDeviceInfo(c *gin.Context) {
 	dat, err := b.lib.GetDeviceInfo()
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend[T]) GetSymbolInfo(c *gin.Context) {
+func (b *Backend) GetSymbol(c *gin.Context) {
 	name := c.Param("name")
-	dat, err := b.lib.GetSymbolInfo(name)
+	dat, err := b.lib.GetSymbol(name)
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend[T]) GetSymbolValue(c *gin.Context) {
+func (b *Backend) GetSymbolInfo(c *gin.Context) {
+	dat, err := b.lib.GetSymbolInfo()
+	returnADSResult(c, dat, err)
+}
+
+func (b *Backend) GetSymbolValue(c *gin.Context) {
 	name := c.Param("name")
 	dat, err := b.lib.GetSymbolValue(name)
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend[T]) ListSymbols(c *gin.Context) {
-	dat, err := b.lib.ListSymbols()
+func (b *Backend) GetSymbolList(c *gin.Context) {
+	dat, err := b.lib.GetSymbolList()
 	returnADSResult(c, dat, err)
 }
 
-func (b *Backend[T]) SetSymbolValue(c *gin.Context) {
-	name := c.Param("name")
+func (b *Backend) SetState(c *gin.Context) {
 	rawData, err := c.GetRawData()
 	if err == nil {
-		var data map[string]interface{}
+		var data goadsinterface.AdsState
 		err := json.Unmarshal(rawData, &data)
 		if err == nil {
-			if value, exists := data["data"]; exists {
-				dat, err := b.lib.SetSymbolValue(name, value)
-				returnADSResult(c, dat, err)
-			} else {
-				dat, err := b.lib.GetSymbolValue(name)
-				returnADSResult(c, dat, err)
-			}
-		} else {
-			c.String(500, "{\"error\":\""+err.Error()+"\"}")
-		}
-	} else {
-		c.String(500, "{\"error\":\""+err.Error()+"\"}")
-	}
-}
-
-func (b *Backend[T]) WriteControl(c *gin.Context) {
-	rawData, err := c.GetRawData()
-	if err == nil {
-		var data map[string]uint16
-		err := json.Unmarshal(rawData, &data)
-		if err == nil {
-			adsState := data["adsState"]
-			deviceState := data["deviceState"]
-			dat, err := b.lib.WriteControl(adsState, deviceState)
+			dat, err := b.lib.SetState(data)
 			returnADSResult(c, dat, err)
 		} else {
 			c.String(500, "{\"error\":\""+err.Error()+"\"}")
@@ -110,24 +81,37 @@ func (b *Backend[T]) WriteControl(c *gin.Context) {
 	}
 }
 
-func (b *Backend[T]) SetupRouter() *gin.Engine {
+func (b *Backend) SetSymbolValue(c *gin.Context) {
+	name := c.Param("name")
+	rawData, err := c.GetRawData()
+	if err == nil {
+		var data goadsinterface.AdsData
+		err := json.Unmarshal(rawData, &data)
+		if err == nil {
+			dat, err := b.lib.SetSymbolValue(name, data)
+			returnADSResult(c, dat, err)
+		} else {
+			c.String(500, "{\"error\":\""+err.Error()+"\"}")
+		}
+	} else {
+		c.String(500, "{\"error\":\""+err.Error()+"\"}")
+	}
+}
+
+func (b *Backend) AttachToRouter(path string, r *gin.Engine) {
+	r.GET(path+"/version", b.GetVersion)
+	r.GET(path+"/state", b.GetState)
+	r.POST(path+"/state", b.SetState)
+	r.GET(path+"/device/info", b.GetDeviceInfo)
+	r.GET(path+"/symbol/:name", b.GetSymbol)
+	r.GET(path+"/symbol", b.GetSymbolInfo)
+	r.GET(path+"/symbol/:name/value", b.GetSymbolValue)
+	r.POST(path+"/symbol/:name/value", b.SetSymbolValue)
+}
+
+func (b *Backend) SetupRouter() *gin.Engine {
 	r := gin.Default()
 	r.SetTrustedProxies(nil)
-	r.GET("/version", b.GetVersion)
-
-	r.GET("/state", b.GetState)
-
-	r.POST("/state", b.WriteControl)
-
-	r.GET("/deviceInfo", b.GetDeviceInfo)
-
-	r.GET("/symbolInfo/:name", b.GetSymbolInfo)
-
-	r.GET("/symbolValue/:name", b.GetSymbolValue)
-
-	r.POST("/symbolValue/:name", b.SetSymbolValue)
-
-	r.GET("/symbolList", b.ListSymbols)
-
+	b.AttachToRouter("", r)
 	return r
 }

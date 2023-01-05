@@ -1,109 +1,144 @@
 package ginads
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/beranek1/goadsinterface"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
 type successLib struct {
-	version     any
-	state       uint16
-	deviceInfo  any
-	symbolValue any
-	symbolList  any
+	version     goadsinterface.AdsVersion
+	state       goadsinterface.AdsState
+	deviceInfo  goadsinterface.AdsDeviceInfo
+	symbolValue goadsinterface.AdsData
+	symbolList  goadsinterface.AdsSymbolList
+	symbolInfo  goadsinterface.AdsSymbolInfo
+	symbol      goadsinterface.AdsSymbol
 }
 
-func (l *successLib) GetVersion() (any, error) {
+func (l *successLib) GetVersion() (goadsinterface.AdsVersion, error) {
 	return l.version, nil
 }
 
-func (l *successLib) GetState() (any, error) {
+func (l *successLib) GetState() (goadsinterface.AdsState, error) {
 	return l.state, nil
 }
 
-func (l *successLib) GetDeviceInfo() (any, error) {
+func (l *successLib) GetDeviceInfo() (goadsinterface.AdsDeviceInfo, error) {
 	return l.deviceInfo, nil
 }
 
-func (l *successLib) GetSymbolInfo(name string) (any, error) {
-	return name, nil
+func (l *successLib) GetSymbol(name string) (goadsinterface.AdsSymbol, error) {
+	return l.symbol, nil
 }
 
-func (l *successLib) GetSymbolValue(_ string) (any, error) {
+func (l *successLib) GetSymbolValue(_ string) (goadsinterface.AdsData, error) {
 	return l.symbolValue, nil
 }
 
-func (l *successLib) ListSymbols() (any, error) {
+func (l *successLib) GetSymbolInfo() (goadsinterface.AdsSymbolInfo, error) {
+	return l.symbolInfo, nil
+}
+
+func (l *successLib) GetSymbolList() (goadsinterface.AdsSymbolList, error) {
 	return l.symbolList, nil
 }
 
-func (l *successLib) SetSymbolValue(_ string, value any) (any, error) {
+func (l *successLib) SetSymbolValue(_ string, value goadsinterface.AdsData) (goadsinterface.AdsData, error) {
 	l.symbolValue = value
 	return l.symbolValue, nil
 }
 
-func (l *successLib) WriteControl(adsState uint16, deviceState uint16) (any, error) {
-	l.state = adsState + deviceState
+func (l *successLib) SetState(state goadsinterface.AdsState) (goadsinterface.AdsState, error) {
+	l.state = state
 	return l.state, nil
 }
 
 type errorLib struct {
 }
 
-func (l *errorLib) GetVersion() (any, error) {
-	return nil, errors.New("")
+func (l *errorLib) GetVersion() (goadsinterface.AdsVersion, error) {
+	return goadsinterface.AdsVersion{}, errors.New("")
 }
 
-func (l *errorLib) GetState() (any, error) {
-	return nil, errors.New("")
+func (l *errorLib) GetState() (goadsinterface.AdsState, error) {
+	return goadsinterface.AdsState{}, errors.New("")
 }
 
-func (l *errorLib) GetDeviceInfo() (any, error) {
-	return nil, errors.New("")
+func (l *errorLib) GetDeviceInfo() (goadsinterface.AdsDeviceInfo, error) {
+	return goadsinterface.AdsDeviceInfo{}, errors.New("")
 }
 
-func (l *errorLib) GetSymbolInfo(_ string) (any, error) {
-	return nil, errors.New("")
+func (l *errorLib) GetSymbol(_ string) (goadsinterface.AdsSymbol, error) {
+	return goadsinterface.AdsSymbol{}, errors.New("")
 }
 
-func (l *errorLib) GetSymbolValue(_ string) (any, error) {
-	return nil, errors.New("")
+func (l *errorLib) GetSymbolValue(_ string) (goadsinterface.AdsData, error) {
+	return goadsinterface.AdsData{}, errors.New("")
 }
 
-func (l *errorLib) ListSymbols() (any, error) {
-	return nil, errors.New("")
+func (l *errorLib) GetSymbolList() (goadsinterface.AdsSymbolList, error) {
+	return goadsinterface.AdsSymbolList{}, errors.New("")
 }
 
-func (l *errorLib) SetSymbolValue(_ string, value any) (any, error) {
-	return nil, errors.New("")
+func (l *errorLib) GetSymbolInfo() (goadsinterface.AdsSymbolInfo, error) {
+	return goadsinterface.AdsSymbolInfo{}, errors.New("")
 }
 
-func (l *errorLib) WriteControl(adsState uint16, deviceState uint16) (any, error) {
-	return nil, errors.New("")
+func (l *errorLib) SetSymbolValue(_ string, value goadsinterface.AdsData) (goadsinterface.AdsData, error) {
+	return goadsinterface.AdsData{}, errors.New("")
+}
+
+func (l *errorLib) SetState(state goadsinterface.AdsState) (goadsinterface.AdsState, error) {
+	return goadsinterface.AdsState{}, errors.New("")
+}
+
+func createTestBackendRouterSuccess() *gin.Engine {
+	v := goadsinterface.AdsVersion{Version: 1, Revision: 2, Build: 3}
+	st := goadsinterface.AdsState{Ads: 4, Device: 5}
+	di := goadsinterface.AdsDeviceInfo{Name: "test", Version: v}
+	dat := goadsinterface.AdsData{Data: "data"}
+	sl := []string{"symbol"}
+	sy := goadsinterface.AdsSymbol{Name: "symbol", IndexGroup: 0, IndexOffset: 0, Size: 0, Type: "string", Comment: "nocomment"}
+	si := goadsinterface.AdsSymbolInfo{}
+	si["sumbol"] = sy
+	l := &successLib{v, st, di, dat, sl, si, sy}
+	b := Create(l)
+	return createTestRouter(b)
+}
+
+func createTestBackendRouterError() *gin.Engine {
+	l := &errorLib{}
+	b := Create(l)
+	return createTestRouter(b)
+}
+
+func createTestRouter(b *Backend) *gin.Engine {
+	router := b.SetupRouter()
+	return router
 }
 
 func TestGetVersionSuccess(t *testing.T) {
-	l := &successLib{1, 2, 3, 4, 5}
-	b := Create[any](l)
-	router := b.SetupRouter()
+	router := createTestBackendRouterSuccess()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/version", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, "1", w.Body.String())
+	jsonStr, _ := json.Marshal(goadsinterface.AdsVersion{Version: 1, Revision: 2, Build: 3})
+	assert.Equal(t, string(jsonStr), w.Body.String())
 }
 
 func TestGetVersionError(t *testing.T) {
-	l := &errorLib{}
-	b := Create[any](l)
-	router := b.SetupRouter()
+	router := createTestBackendRouterError()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/version", nil)
@@ -114,22 +149,19 @@ func TestGetVersionError(t *testing.T) {
 }
 
 func TestGetStateSuccess(t *testing.T) {
-	l := &successLib{1, 2, 3, 4, 5}
-	b := Create[any](l)
-	router := b.SetupRouter()
+	router := createTestBackendRouterSuccess()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/state", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, "2", w.Body.String())
+	jsonStr, _ := json.Marshal(goadsinterface.AdsState{Ads: 4, Device: 5})
+	assert.Equal(t, string(jsonStr), w.Body.String())
 }
 
 func TestGetStateError(t *testing.T) {
-	l := &errorLib{}
-	b := Create[any](l)
-	router := b.SetupRouter()
+	router := createTestBackendRouterError()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/state", nil)
@@ -140,51 +172,45 @@ func TestGetStateError(t *testing.T) {
 }
 
 func TestGetDeviceInfoSuccess(t *testing.T) {
-	l := &successLib{1, 2, 3, 4, 5}
-	b := Create[any](l)
-	router := b.SetupRouter()
+	router := createTestBackendRouterSuccess()
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/deviceInfo", nil)
+	req, _ := http.NewRequest("GET", "/device/info", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, "3", w.Body.String())
+	jsonStr, _ := json.Marshal(goadsinterface.AdsDeviceInfo{Name: "test", Version: goadsinterface.AdsVersion{Version: 1, Revision: 2, Build: 3}})
+	assert.Equal(t, string(jsonStr), w.Body.String())
 }
 
 func TestGetDeviceInfoError(t *testing.T) {
-	l := &errorLib{}
-	b := Create[any](l)
-	router := b.SetupRouter()
+	router := createTestBackendRouterError()
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/deviceInfo", nil)
+	req, _ := http.NewRequest("GET", "/device/info", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 500, w.Code)
 	assert.Equal(t, "{\"error\":\"\"}", w.Body.String())
 }
 
-func TestGetSymbolInfoSuccess(t *testing.T) {
-	l := &successLib{1, 2, 3, 4, 5}
-	b := Create[any](l)
-	router := b.SetupRouter()
+func TestGetSymbolSuccess(t *testing.T) {
+	router := createTestBackendRouterSuccess()
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/symbolInfo/test", nil)
+	req, _ := http.NewRequest("GET", "/symbol/test", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, "\"test\"", w.Body.String())
+	jsonStr, _ := json.Marshal(goadsinterface.AdsSymbol{Name: "symbol", IndexGroup: 0, IndexOffset: 0, Size: 0, Type: "string", Comment: "nocomment"})
+	assert.Equal(t, string(jsonStr), w.Body.String())
 }
 
-func TestGetSymbolInfoError(t *testing.T) {
-	l := &errorLib{}
-	b := Create[any](l)
-	router := b.SetupRouter()
+func TestGetSymbolError(t *testing.T) {
+	router := createTestBackendRouterError()
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/symbolInfo/test", nil)
+	req, _ := http.NewRequest("GET", "/symbol/test", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 500, w.Code)
@@ -192,51 +218,47 @@ func TestGetSymbolInfoError(t *testing.T) {
 }
 
 func TestGetSymbolValueSuccess(t *testing.T) {
-	l := &successLib{1, 2, 3, 4, 5}
-	b := Create[any](l)
-	router := b.SetupRouter()
+	router := createTestBackendRouterSuccess()
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/symbolValue/test", nil)
+	req, _ := http.NewRequest("GET", "/symbol/test/value", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, "4", w.Body.String())
+	jsonStr, _ := json.Marshal(goadsinterface.AdsData{Data: "data"})
+	assert.Equal(t, string(jsonStr), w.Body.String())
 }
 
 func TestGetSymbolValueError(t *testing.T) {
-	l := &errorLib{}
-	b := Create[any](l)
-	router := b.SetupRouter()
+	router := createTestBackendRouterError()
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/symbolValue/test", nil)
+	req, _ := http.NewRequest("GET", "/symbol/test/value", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 500, w.Code)
 	assert.Equal(t, "{\"error\":\"\"}", w.Body.String())
 }
 
-func TestListSymbolsSuccess(t *testing.T) {
-	l := &successLib{1, 2, 3, 4, 5}
-	b := Create[any](l)
-	router := b.SetupRouter()
+func TestGetSymbolInfoSuccess(t *testing.T) {
+	router := createTestBackendRouterSuccess()
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/symbolList", nil)
+	req, _ := http.NewRequest("GET", "/symbol", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, "5", w.Body.String())
+	si := goadsinterface.AdsSymbolInfo{}
+	si["sumbol"] = goadsinterface.AdsSymbol{Name: "symbol", IndexGroup: 0, IndexOffset: 0, Size: 0, Type: "string", Comment: "nocomment"}
+	jsonStr, _ := json.Marshal(si)
+	assert.Equal(t, string(jsonStr), w.Body.String())
 }
 
-func TestListSymbolsError(t *testing.T) {
-	l := &errorLib{}
-	b := Create[any](l)
-	router := b.SetupRouter()
+func TestGetSymbolInfoError(t *testing.T) {
+	router := createTestBackendRouterError()
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/symbolList", nil)
+	req, _ := http.NewRequest("GET", "/symbol", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 500, w.Code)
@@ -244,62 +266,56 @@ func TestListSymbolsError(t *testing.T) {
 }
 
 func TestSetSymbolValueSuccess(t *testing.T) {
-	l := &successLib{1, 2, 3, 4, 5}
-	b := Create[any](l)
-	router := b.SetupRouter()
+	router := createTestBackendRouterSuccess()
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/symbolValue/test", strings.NewReader("{\"data\":6}"))
+	jsonStr, _ := json.Marshal(goadsinterface.AdsData{Data: "data"})
+	req, _ := http.NewRequest("POST", "/symbol/test/value", strings.NewReader(string(jsonStr)))
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, "6", w.Body.String())
+	assert.Equal(t, string(jsonStr), w.Body.String())
 }
 
 func TestSetSymbolValueError(t *testing.T) {
-	l := &errorLib{}
-	b := Create[any](l)
-	router := b.SetupRouter()
+	router := createTestBackendRouterError()
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/symbolValue/test", strings.NewReader(""))
+	req, _ := http.NewRequest("POST", "/symbol/test/value", strings.NewReader(""))
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 500, w.Code)
 	assert.Equal(t, "{\"error\":\"unexpected end of JSON input\"}", w.Body.String())
 }
 
-func TestWriteControlSuccess(t *testing.T) {
-	l := &successLib{1, 2, 3, 4, 5}
-	b := Create[any](l)
-	router := b.SetupRouter()
+func TestSetStateSuccess(t *testing.T) {
+	router := createTestBackendRouterSuccess()
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/state", strings.NewReader("{\"adsState\":5,\"deviceState\":7}"))
+	jsonStr, _ := json.Marshal(goadsinterface.AdsState{Ads: 4, Device: 5})
+	req, _ := http.NewRequest("POST", "/state", strings.NewReader(string(jsonStr)))
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, "12", w.Body.String())
+	assert.Equal(t, string(jsonStr), w.Body.String())
 
-	w = httptest.NewRecorder()
-	req2, _ := http.NewRequest("POST", "/state", strings.NewReader("{\"adsState\":5}"))
-	router.ServeHTTP(w, req2)
+	// w = httptest.NewRecorder()
+	// req2, _ := http.NewRequest("POST", "/state", strings.NewReader("{\"adsState\":5}"))
+	// router.ServeHTTP(w, req2)
 
-	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, "5", w.Body.String())
+	// assert.Equal(t, 200, w.Code)
+	// assert.Equal(t, "5", w.Body.String())
 
-	w = httptest.NewRecorder()
-	req3, _ := http.NewRequest("POST", "/state", strings.NewReader("{\"deviceState\":7}"))
-	router.ServeHTTP(w, req3)
+	// w = httptest.NewRecorder()
+	// req3, _ := http.NewRequest("POST", "/state", strings.NewReader("{\"deviceState\":7}"))
+	// router.ServeHTTP(w, req3)
 
-	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, "7", w.Body.String())
+	// assert.Equal(t, 200, w.Code)
+	// assert.Equal(t, "7", w.Body.String())
 }
 
-func TestWriteControlError(t *testing.T) {
-	l := &errorLib{}
-	b := Create[any](l)
-	router := b.SetupRouter()
+func TestSetStateError(t *testing.T) {
+	router := createTestBackendRouterError()
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/state", strings.NewReader(""))
